@@ -9,7 +9,8 @@ else
 fi
 
 # Set environment variables
-VERSION="latest"
+# VERSION="latest"
+VERSION="v0.7.2-dev.2"
 CONTAINER_IMAGE="ghcr.io/eclipse-pullpiri/pullpiri:${VERSION}"
 # If you want to use a locally built image, uncomment the line below and comment out the line above
 # CONTAINER_IMAGE="localhost/pullpiri:latest"
