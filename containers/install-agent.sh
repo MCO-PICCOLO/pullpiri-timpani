@@ -57,7 +57,7 @@ AGENT_BINARY_PATH="/opt/pullpiri/nodeagent"
 rm -f "$AGENT_BINARY_PATH"
 sudo mkdir -p /opt/pullpiri
 if [ ! -f "$AGENT_BINARY_PATH" ]; then
-	BINARY_URL="https://github.com/eclipse-pullpiri/pullpiri/releases/latest/download/nodeagent-linux-${SUFFIX}"
+	BINARY_URL="https://github.com/eclipse-pullpiri/pullpiri/releases/download/v0.7.2-dev.2/nodeagent-linux-${SUFFIX}"
 	echo "Downloading binary from ${BINARY_URL}..."
 	curl -L -o nodeagent "${BINARY_URL}"
 	if [ $? -ne 0 ]; then
