@@ -11,3 +11,7 @@ dist/reports/
 
 # Generated files by proto compiler
 src/common/src/generated
+
+# MkDocs
+/site/
+.venv/
