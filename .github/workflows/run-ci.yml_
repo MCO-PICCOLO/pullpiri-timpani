@@ -11,7 +11,7 @@ jobs:
     steps:
       # Step 1: Checkout the code
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # Step 2: Install essential dependencies including protobuf-compiler and dbus
       - name: Install essential dependencies

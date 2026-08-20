@@ -214,12 +214,16 @@ impl ActionControllerConnection for ActionControllerReceiver {
         logd!(
             3,
             "[ActionController] Offloading model '{}' from '{}' to '{}'",
-            req.model_name, req.source_node, req.target_node
+            req.model_name,
+            req.source_node,
+            req.target_node
         );
         logd!(
             3,
             "[ActionController]   Scenario: {}, Package: {}, Policy: {}",
-            req.scenario_name, req.package_name, req.policy_name
+            req.scenario_name,
+            req.package_name,
+            req.policy_name
         );
         logd!(3, "[ActionController]   Reason: {}", req.reason);
 
@@ -250,7 +254,9 @@ impl ActionControllerConnection for ActionControllerReceiver {
                 logd!(
                     3,
                     "[ActionController] Successfully offloaded '{}' from '{}' to '{}'",
-                    req.model_name, req.source_node, req.target_node
+                    req.model_name,
+                    req.source_node,
+                    req.target_node
                 );
                 Ok(Response::new(OffloadModelResponse {
                     success: true,
@@ -265,7 +271,8 @@ impl ActionControllerConnection for ActionControllerReceiver {
                 logd!(
                     5,
                     "[ActionController] Failed to offload '{}': {}",
-                    req.model_name, e
+                    req.model_name,
+                    e
                 );
                 Ok(Response::new(OffloadModelResponse {
                     success: false,
@@ -298,7 +305,9 @@ impl ActionControllerConnection for ActionControllerReceiver {
         logd!(
             3,
             "[ActionController] Stopping workload: package='{}', model='{}', node='{}'",
-            req.package_name, req.model_name, req.node_name
+            req.package_name,
+            req.model_name,
+            req.node_name
         );
         logd!(3, "[ActionController]   Reason: {}", req.reason);
 
@@ -342,7 +351,8 @@ impl ActionControllerConnection for ActionControllerReceiver {
                 logd!(
                     3,
                     "[ActionController] Successfully stopped workload '{}' on node '{}'",
-                    req.model_name, req.node_name
+                    req.model_name,
+                    req.node_name
                 );
 
                 // Notify Timpani about the recovery action (if workload_id is provided)
@@ -411,7 +421,10 @@ impl ActionControllerConnection for ActionControllerReceiver {
         logd!(
             3,
             "[ActionController] RequestResourceScaling node='{}' workload='{}' cpu={}m mem={}MiB",
-            req.node_id, req.workload_id, req.target_cpu_limit, req.target_memory_limit
+            req.node_id,
+            req.workload_id,
+            req.target_cpu_limit,
+            req.target_memory_limit
         );
 
         // 1. Validate resource availability. The ResourceManager decides whether

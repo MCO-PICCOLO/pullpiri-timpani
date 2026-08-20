@@ -236,22 +236,37 @@ fn convert_cpus_to_podman_format(cpus: &[u32]) -> String {
 
 /// Load node configurations from YAML file with retry logic
 /// Retries until RocksDB is ready (max 30 retries, 1 second interval)
-async fn load_node_configurations_with_retry() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn load_node_configurations_with_retry(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     const MAX_RETRIES: u32 = 30;
     const RETRY_INTERVAL: u64 = 1000; // 1 second
 
     for attempt in 1..=MAX_RETRIES {
         match load_node_configurations().await {
             Ok(()) => {
-                logd!(2, "Node configurations loaded successfully on attempt {}", attempt);
+                logd!(
+                    2,
+                    "Node configurations loaded successfully on attempt {}",
+                    attempt
+                );
                 return Ok(());
             }
             Err(e) if attempt < MAX_RETRIES => {
-                logd!(3, "Attempt {}: Failed to load node configs ({}), retrying...", attempt, e);
+                logd!(
+                    3,
+                    "Attempt {}: Failed to load node configs ({}), retrying...",
+                    attempt,
+                    e
+                );
                 tokio::time::sleep(tokio::time::Duration::from_millis(RETRY_INTERVAL)).await;
             }
             Err(e) => {
-                logd!(4, "Failed to load node configurations after {} attempts: {}", MAX_RETRIES, e);
+                logd!(
+                    4,
+                    "Failed to load node configurations after {} attempts: {}",
+                    MAX_RETRIES,
+                    e
+                );
                 // Don't return error - allow system to continue even if config load fails
                 return Ok(());
             }
@@ -262,7 +277,7 @@ async fn load_node_configurations_with_retry() -> Result<(), Box<dyn std::error:
 }
 
 /// Load node configurations from /etc/pullpiri/node_configurations.yaml and store in RocksDB
-/// 
+///
 /// RocksDB key format:
 ///   - Key: `timpani/nodes/{node_id}/available_cpus`
 ///   - Value: CPU cores in Podman format (e.g., "0-2,5-7")
@@ -274,20 +289,30 @@ async fn load_node_configurations() -> Result<(), Box<dyn std::error::Error + Se
         .map_err(|e| format!("Failed to read {}: {}", CONFIG_PATH, e))?;
 
     // Parse YAML
-    let config: NodeConfigurations = serde_yaml::from_str(&yaml_str)
-        .map_err(|e| format!("Failed to parse YAML: {}", e))?;
+    let config: NodeConfigurations =
+        serde_yaml::from_str(&yaml_str).map_err(|e| format!("Failed to parse YAML: {}", e))?;
 
-    logd!(2, "Found {} node(s) in node_configurations.yaml", config.nodes.len());
+    logd!(
+        2,
+        "Found {} node(s) in node_configurations.yaml",
+        config.nodes.len()
+    );
 
     // Store each node's available CPUs in RocksDB
     for (node_id, node_info) in config.nodes {
         let cpus_podman_format = convert_cpus_to_podman_format(&node_info.available_cpus);
-        
+
         let key = format!("timpani/nodes/{}/available_cpus", node_id);
-        common::kvstore::put(&key, &cpus_podman_format).await
+        common::kvstore::put(&key, &cpus_podman_format)
+            .await
             .map_err(|e| format!("Failed to store node config for {}: {}", node_id, e))?;
 
-        logd!(2, "  Registered node '{}': cpus={}", node_id, cpus_podman_format);
+        logd!(
+            2,
+            "  Registered node '{}': cpus={}",
+            node_id,
+            cpus_podman_format
+        );
     }
 
     Ok(())

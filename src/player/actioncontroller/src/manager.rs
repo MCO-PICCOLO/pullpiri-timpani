@@ -242,7 +242,13 @@ impl ActionControllerManager {
             if let Ok(cpuset) = self.get_cpuset_for_node(&model_node).await {
                 pod_with_annotations =
                     self.inject_cpuset_annotation(&pod_with_annotations, &cpuset)?;
-                logd!(3, "Injected cpuset '{}' for model '{}' on node '{}'", cpuset, model_name, model_node);
+                logd!(
+                    3,
+                    "Injected cpuset '{}' for model '{}' on node '{}'",
+                    cpuset,
+                    model_name,
+                    model_node
+                );
             }
         }
 
@@ -410,19 +416,20 @@ impl ActionControllerManager {
         };
 
         // Get or create annotations mapping
-        let annotations = match metadata.get_mut(&serde_yaml::Value::String("annotations".to_string())) {
-            Some(a) if a.is_mapping() => a.as_mapping_mut().unwrap(),
-            _ => {
-                metadata.insert(
-                    serde_yaml::Value::String("annotations".to_string()),
-                    serde_yaml::Value::Mapping(serde_yaml::Mapping::new()),
-                );
-                metadata
-                    .get_mut(&serde_yaml::Value::String("annotations".to_string()))
-                    .and_then(|a| a.as_mapping_mut())
-                    .ok_or("Failed to create annotations")?
-            }
-        };
+        let annotations =
+            match metadata.get_mut(&serde_yaml::Value::String("annotations".to_string())) {
+                Some(a) if a.is_mapping() => a.as_mapping_mut().unwrap(),
+                _ => {
+                    metadata.insert(
+                        serde_yaml::Value::String("annotations".to_string()),
+                        serde_yaml::Value::Mapping(serde_yaml::Mapping::new()),
+                    );
+                    metadata
+                        .get_mut(&serde_yaml::Value::String("annotations".to_string()))
+                        .and_then(|a| a.as_mapping_mut())
+                        .ok_or("Failed to create annotations")?
+                }
+            };
 
         // Add cpuset annotation
         annotations.insert(

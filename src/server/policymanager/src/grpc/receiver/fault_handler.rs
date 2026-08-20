@@ -174,8 +174,6 @@ fn find_model_for_node(package: &Package, node_id: &str) -> Result<String, Strin
         .ok_or_else(|| "Package has no models".to_string())
 }
 
-
-
 /// Stop workload via ActionController
 async fn stop_workload(
     package_name: &str,
@@ -244,5 +242,4 @@ mod tests {
         assert!(response.processed);
         assert!(response.message.contains("not handled"));
     }
-
 }
