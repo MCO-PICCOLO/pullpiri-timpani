@@ -72,7 +72,7 @@ spec:
   hostNetwork: true
   containers:
     - name: helloworld
-      image: ghcr.io/mco-piccolo/timpani_test:v3
+      image: ghcr.io/mco-piccolo/timpani_test:v4
       command: ["./sample_apps"]
       args: ["basic_task"]
       securityContext:

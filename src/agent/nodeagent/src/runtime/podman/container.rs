@@ -148,6 +148,7 @@ fn build_host_config(
     container: &serde_json::Value,
     spec: &serde_json::Value,
     host_network: bool,
+    annotations: &std::collections::HashMap<String, String>,
 ) -> serde_json::Value {
     let mut host_config = serde_json::Map::new();
 
@@ -159,8 +160,8 @@ fn build_host_config(
     // Security context (capabilities, privileged, user/group)
     apply_security_config(&mut host_config, container);
 
-    // Resource limits (CPU, Memory, GPU)
-    apply_resource_limits(&mut host_config, container);
+    // Resource limits (CPU, Memory, GPU, CPUset)
+    apply_resource_limits(&mut host_config, container, annotations);
 
     // Port bindings
     apply_port_bindings(&mut host_config, container);
@@ -227,10 +228,11 @@ fn apply_security_config(
     }
 }
 
-/// Apply resource limits (CPU, Memory, GPU) to HostConfig
+/// Apply resource limits (CPU, Memory, GPU, CPUset) to HostConfig
 fn apply_resource_limits(
     host_config: &mut serde_json::Map<String, serde_json::Value>,
     container: &serde_json::Value,
+    annotations: &std::collections::HashMap<String, String>,
 ) {
     if let Some(limits) = container["resources"]
         .get("limits")
@@ -256,6 +258,12 @@ fn apply_resource_limits(
             apply_gpu_devices(host_config, gpu_value);
             apply_nvidia_libraries(host_config);
         }
+    }
+
+    // CPUset affinity (from annotations: io.pullpiri.cpusetcpus)
+    if let Some(cpuset) = annotations.get("io.pullpiri.cpusetcpus") {
+        host_config.insert("CpusetCpus".to_string(), json!(cpuset));
+        println!("Applied CPUset: {}", cpuset);
     }
 }
 
@@ -815,7 +823,7 @@ fn build_container_spec(
     }
 
     // Host configuration (resources, security, networking, etc.)
-    let host_config = build_host_config(container, spec, host_network);
+    let host_config = build_host_config(container, spec, host_network, annotations);
     if !host_config.as_object().unwrap().is_empty() {
         create_body["HostConfig"] = host_config;
     }

@@ -4,7 +4,8 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-rm -rf /etc/pullpiri/*
+rm -rf /etc/pullpiri/settings.yaml
+rm -rf /etc/pullpiri/pullpiri_shared_rocksdb
 rm -rf /run/pullpirilog
 
 podman pod stop -t 0 pullpiri-player

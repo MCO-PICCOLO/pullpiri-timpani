@@ -36,12 +36,17 @@ podman run -d \
   rocksdbservice --path /data --addr 0.0.0.0 --port 47007
 
 # Run apiserver container
+# Build apiserver command with optional node_configurations.yaml mount
+APISERVER_MOUNTS="-v /etc/pullpiri/settings.yaml:/etc/pullpiri/settings.yaml:Z -v /run/pullpirilog/:/run/pullpirilog/"
+if [ -f /etc/pullpiri/node_configurations.yaml ]; then
+	APISERVER_MOUNTS="${APISERVER_MOUNTS} -v /etc/pullpiri/node_configurations.yaml:/etc/pullpiri/node_configurations.yaml:Z"
+fi
+
 podman run -d \
   --pod pullpiri-server \
   --name pullpiri-apiserver \
   -e ROCKSDB_SERVICE_URL="http://${MASTER_IP}:47007" \
-  -v /etc/pullpiri/settings.yaml:/etc/pullpiri/settings.yaml:Z \
-  -v /run/pullpirilog/:/run/pullpirilog/ \
+  ${APISERVER_MOUNTS} \
   ${CONTAINER_IMAGE} \
   /pullpiri/apiserver
 
