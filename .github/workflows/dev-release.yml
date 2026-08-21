@@ -105,6 +105,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Normalize image repository to lowercase
+        id: normalize-image
+        shell: bash
+        run: |
+          echo "image_repo=$(echo \"${{ env.IMAGE_NAME }}\" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
       - name: Build and push multi-arch image
         uses: docker/build-push-action@v6
         with:
@@ -115,5 +121,5 @@ jobs:
           build-args: |
             TARGETARCH
           tags: |
-            ${{ env.CONTAINER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
-            ${{ env.CONTAINER_REGISTRY }}/${{ env.IMAGE_NAME }}:dev-latest
+            ${{ env.CONTAINER_REGISTRY }}/${{ steps.normalize-image.outputs.image_repo }}:${{ github.ref_name }}
+            ${{ env.CONTAINER_REGISTRY }}/${{ steps.normalize-image.outputs.image_repo }}:dev-latest
