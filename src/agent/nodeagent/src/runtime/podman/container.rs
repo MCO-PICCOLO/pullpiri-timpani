@@ -21,8 +21,7 @@
 //! - Podman API communication (create, start, stop, restart)
 //! - Image management (existence check, pull)
 
-use super::{get, post};
-use hyper::Body;
+use super::{body_from, empty_body, get, post};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::fs;
@@ -103,7 +102,7 @@ fn parse_pod(
         serde_json::Value,
         std::collections::HashMap<String, String>,
     ),
-    Box<dyn std::error::Error>,
+    Box<dyn std::error::Error + Send + Sync>,
 > {
     let pod = serde_yaml::from_str::<common::spec::k8s::Pod>(pod_yaml)?;
     let pod_name = pod.get_name();
@@ -127,7 +126,7 @@ fn parse_pod(
 fn get_container_names(
     pod_name: &str,
     spec: &serde_json::Value,
-) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
     let containers = spec["containers"]
         .as_array()
         .ok_or("No containers found in spec")?;
@@ -268,7 +267,7 @@ fn apply_resource_limits(
 }
 
 /// Read and parse CDI NVIDIA specification
-fn read_cdi_spec() -> Result<CdiSpec, Box<dyn std::error::Error>> {
+fn read_cdi_spec() -> Result<CdiSpec, Box<dyn std::error::Error + Send + Sync>> {
     let cdi_content = fs::read_to_string(CDI_NVIDIA_PATH)
         .map_err(|e| format!("Failed to read CDI file {}: {}", CDI_NVIDIA_PATH, e))?;
 
@@ -747,7 +746,7 @@ async fn create_container(
     spec: &serde_json::Value,
     host_network: bool,
     annotations: &std::collections::HashMap<String, String>,
-) -> Result<String, Box<dyn std::error::Error>> {
+) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
     let image = container["image"]
         .as_str()
         .ok_or("Container image field not found")?;
@@ -771,7 +770,9 @@ async fn create_container(
 }
 
 /// Ensure the container image is available locally (pull if needed)
-async fn ensure_image_available(image: &str) -> Result<(), Box<dyn std::error::Error>> {
+async fn ensure_image_available(
+    image: &str,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     if !image_exists(image).await? {
         println!("Image {} not found locally, pulling...", image);
         pull_image(image).await?;
@@ -862,11 +863,11 @@ fn apply_command_and_args(create_body: &mut serde_json::Value, container: &serde
 async fn create_container_via_api(
     name: &str,
     create_body: serde_json::Value,
-) -> Result<String, Box<dyn std::error::Error>> {
+) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
     println!("Creating container: {}", name);
 
     let create_path = format!("{}/containers/create?name={}", PODMAN_API_VERSION, name);
-    let create_response = post(&create_path, Body::from(create_body.to_string())).await?;
+    let create_response = post(&create_path, body_from(create_body.to_string())).await?;
 
     let create_result: serde_json::Value = serde_json::from_slice(&create_response)?;
     let container_id = create_result["Id"]
@@ -877,7 +878,9 @@ async fn create_container_via_api(
     Ok(container_id)
 }
 
-pub async fn start(pod_yaml: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+pub async fn start(
+    pod_yaml: &str,
+) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
     let (pod_name, spec, annotations) = parse_pod(pod_yaml)?;
     let host_network = spec["hostNetwork"].as_bool().unwrap_or(false);
 
@@ -891,7 +894,7 @@ pub async fn start(pod_yaml: &str) -> Result<Vec<String>, Box<dyn std::error::Er
             // Start the container
             println!("Starting container: {}", container_id);
             let start_path = format!("{}/containers/{}/start", PODMAN_API_VERSION, container_id);
-            post(&start_path, Body::empty()).await?;
+            post(&start_path, empty_body()).await?;
 
             println!("Container {} started successfully", container_id);
             container_ids.push(container_id);
@@ -901,7 +904,7 @@ pub async fn start(pod_yaml: &str) -> Result<Vec<String>, Box<dyn std::error::Er
     Ok(container_ids)
 }
 
-pub async fn stop(pod_yaml: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn stop(pod_yaml: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let (pod_name, spec, _annotations) = parse_pod(pod_yaml)?;
     let container_names = get_container_names(&pod_name, &spec)?;
 
@@ -912,7 +915,7 @@ pub async fn stop(pod_yaml: &str) -> Result<(), Box<dyn std::error::Error>> {
             "{}/containers/{}/stop?timeout=0&t=0",
             PODMAN_API_VERSION, full_container_name
         );
-        match post(&stop_path, Body::empty()).await {
+        match post(&stop_path, empty_body()).await {
             Ok(_) => println!("Container {} stopped successfully", full_container_name),
             Err(e) => println!(
                 "Warning: Failed to stop container {}: {}",
@@ -938,7 +941,7 @@ pub async fn stop(pod_yaml: &str) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-pub async fn restart(pod_yaml: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn restart(pod_yaml: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let (pod_name, spec, _annotations) = parse_pod(pod_yaml)?;
     let container_names = get_container_names(&pod_name, &spec)?;
 
@@ -949,12 +952,13 @@ pub async fn restart(pod_yaml: &str) -> Result<(), Box<dyn std::error::Error>> {
             "{}/containers/{}/restart",
             PODMAN_API_VERSION, full_container_name
         );
-        match post(&restart_path, Body::empty()).await {
+        match post(&restart_path, empty_body()).await {
             Ok(_) => println!("Container {} restarted successfully", full_container_name),
             Err(e) => {
+                let error_message = e.to_string();
                 println!(
                     "Warning: Failed to restart container {}: {}",
-                    full_container_name, e
+                    full_container_name, error_message
                 );
                 println!("Attempting full stop/start cycle...");
                 // Fallback: if restart fails, try stop and start
@@ -969,7 +973,9 @@ pub async fn restart(pod_yaml: &str) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// Check if an image exists locally
-pub async fn image_exists(image_name: &str) -> Result<bool, Box<dyn std::error::Error>> {
+pub async fn image_exists(
+    image_name: &str,
+) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
     let path = "/v4.0.0/libpod/images/json";
 
     let result = get(path).await?;
@@ -987,9 +993,11 @@ pub async fn image_exists(image_name: &str) -> Result<bool, Box<dyn std::error::
 }
 
 /// Pull an image from a registry
-pub async fn pull_image(image_name: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn pull_image(
+    image_name: &str,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let path = format!("/v4.0.0/libpod/images/pull?reference={}", image_name);
-    post(&path, Body::empty()).await?;
+    post(&path, empty_body()).await?;
     Ok(())
 }
 

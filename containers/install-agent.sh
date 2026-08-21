@@ -55,7 +55,7 @@ fi
 # Make directory and binary
 AGENT_BINARY_PATH="/opt/pullpiri/nodeagent"
 rm -f "$AGENT_BINARY_PATH"
-sudo mkdir -p /opt/pullpiri
+sudo mkdir -p "$(dirname "${AGENT_BINARY_PATH}")"
 if [ ! -f "$AGENT_BINARY_PATH" ]; then
 	BINARY_URL="https://github.com/eclipse-pullpiri/pullpiri/releases/download/v0.7.2-dev.2/nodeagent-linux-${SUFFIX}"
 	echo "Downloading binary from ${BINARY_URL}..."
@@ -64,10 +64,10 @@ if [ ! -f "$AGENT_BINARY_PATH" ]; then
 		echo "Error: Failed to download binary from ${BINARY_URL}"
 		exit 1
 	fi
-	sudo mv -f nodeagent /opt/pullpiri/nodeagent
+	sudo mv -f nodeagent "${AGENT_BINARY_PATH}"
 fi
-sudo chmod +x /opt/pullpiri/nodeagent
-echo "Binary installed to /opt/pullpiri/nodeagent"
+sudo chmod +x "${AGENT_BINARY_PATH}"
+echo "Binary installed to ${AGENT_BINARY_PATH}"
 
 # Create configuration file
 echo "Creating configuration file..."

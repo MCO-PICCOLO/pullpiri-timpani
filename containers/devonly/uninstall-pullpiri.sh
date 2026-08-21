@@ -17,10 +17,11 @@ sleep 1
 
 "${SCRIPT_DIR}/uninstall-agent.sh"
 
-ids=$(podman ps -aq)
-if [ -n "$ids" ]; then
-  podman stop -t 0 $ids
-  podman rm -f $ids
-else
-  echo "No containers to remove."
-fi
+## Delete all containers (uncomment if you want to remove all containers)
+# ids=$(podman ps -aq)
+# if [ -n "$ids" ]; then
+#   podman stop -t 0 $ids
+#   podman rm -f $ids
+# else
+#   echo "No containers to remove."
+# fi
