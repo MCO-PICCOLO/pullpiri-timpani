@@ -55,70 +55,70 @@ jobs:
 
       # Optional: coverage report for the agent component (commented out)
       # - name: Download coverage report for agent
-      #   uses: actions/download-artifact@v4
+      #   uses: actions/download-artifact@v6
       #   with:
       #     name: code-coverage-html-agent
       #     path: dist/coverage/agent/
 
       # Optional: coverage report for the player component (commented out)
       # - name: Download coverage report for player
-      #   uses: actions/download-artifact@v4
+      #   uses: actions/download-artifact@v6
       #   with:
       #     name: code-coverage-html-player
       #     path: dist/coverage/player/
       
       # Code coverage HTML report for the server component
       - name: Download coverage report for server
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: code-coverage-html-server
           path: dist/coverage/server/
 
       # Code coverage HTML report for the tools component
       - name: Download coverage report for tools
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: code-coverage-html-tools
           path: dist/coverage/tools/
 
       # Code coverage HTML report for the common component
       - name: Download coverage report for common
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: code-coverage-html-common
           path: dist/coverage/common/
       
       # Deny-check report (license allowlist violations)
       - name: Download deny report
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: deny-report
           path: dist/reports/deny/
       
       # Formatting report (rustfmt summary)
       - name: Download fmt report
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: fmt-report
           path: dist/reports/fmt/
 
       # Test result report (JUnit XML format)
       - name: Download test report
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: test-report
           path: dist/tests/
       
       # License HTML report from cargo-about
       - name: Download license report
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: license-report
           path: dist/licenses/
 
       # Download nodeagent binary
       - name: Download nodeagent binary
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: nodeagent-binary
           path: dist/binaries/
