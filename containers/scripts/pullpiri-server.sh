@@ -20,8 +20,9 @@ if [[ -n "${PULLPIRI_IMAGE:-}" ]]; then
 elif [[ "${INSTALL_MODE}" == "dev" ]]; then
   CONTAINER_IMAGE="localhost/pullpiri:latest"
 else
-  VERSION="v0.7.2-dev.2"
-  CONTAINER_IMAGE="ghcr.io/eclipse-pullpiri/pullpiri:${VERSION}"
+  VERSION="latest"
+# CONTAINER_IMAGE="ghcr.io/eclipse-pullpiri/pullpiri:${VERSION}"
+  CONTAINER_IMAGE="ghcr.io/mco-piccolo/pullpiri-timpani:${VERSION}"
 fi
 echo "Running server with image: ${CONTAINER_IMAGE}"
 
