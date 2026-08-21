@@ -75,7 +75,7 @@ jobs:
           chmod +x "dist/binaries/${{ matrix.output_name }}"
 
       - name: Upload workflow artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: nodeagent-binary-${{ matrix.arch }}
           path: dist/binaries/${{ matrix.output_name }}

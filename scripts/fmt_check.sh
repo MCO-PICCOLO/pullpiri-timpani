@@ -19,15 +19,28 @@ echo "Running Cargo fmt..." | tee -a "$LOG_FILE"
 PROJECT_ROOT=${GITHUB_WORKSPACE:-$(pwd)}
 cd "$PROJECT_ROOT"
 
+resolve_manifest() {
+  local primary="$1"
+  local fallback="${primary#src/}"
+
+  if [[ -f "$primary" ]]; then
+    echo "$primary"
+  elif [[ -f "$fallback" ]]; then
+    echo "$fallback"
+  else
+    echo ""
+  fi
+}
+
 FAILED_TOTAL=0  # Counter for failed formatting checks
 PASSED_TOTAL=0  # Counter for passed formatting checks
 PIDS=()        # (Unused here but declared in case of future parallel runs)
 
 # Declare paths to Cargo.toml manifests for different crates/components
-MAJOR_MANIFEST="src/Cargo.toml"
-NODEAGENT_MANIFEST="src/agent/nodeagent/Cargo.toml"
-ROCKSDBSERVICE_MANIFEST="src/server/rocksdbservice/Cargo.toml"
-TOOLS_MANIFEST="src/tools/Cargo.toml"
+MAJOR_MANIFEST=$(resolve_manifest "src/Cargo.toml")
+NODEAGENT_MANIFEST=$(resolve_manifest "src/agent/nodeagent/Cargo.toml")
+ROCKSDBSERVICE_MANIFEST=$(resolve_manifest "src/server/rocksdbservice/Cargo.toml")
+TOOLS_MANIFEST=$(resolve_manifest "src/tools/Cargo.toml")
 
 # Function to run 'cargo fmt --check' on a given manifest and record results
 run_fmt() {
@@ -57,26 +70,26 @@ run_fmt() {
 }
 
 # Run formatting checks for each crate manifest if the file exists
-if [[ -f "$MAJOR_MANIFEST" ]]; then
+if [[ -n "$MAJOR_MANIFEST" ]]; then
   run_fmt "$MAJOR_MANIFEST" "major"
 else
-  echo "::warning ::$MAJOR_MANIFEST not found, skipping..."
+  echo "::warning ::src/Cargo.toml not found, skipping..."
 fi
 
-if [[ -f "$NODEAGENT_MANIFEST" ]]; then
+if [[ -n "$NODEAGENT_MANIFEST" ]]; then
   run_fmt "$NODEAGENT_MANIFEST" "nodeagent"
 else
-  echo "::warning ::$NODEAGENT_MANIFEST not found, skipping..."
+  echo "::warning ::src/agent/nodeagent/Cargo.toml not found, skipping..."
 fi
 
-if [[ -f "$ROCKSDBSERVICE_MANIFEST" ]]; then
+if [[ -n "$ROCKSDBSERVICE_MANIFEST" ]]; then
   run_fmt "$ROCKSDBSERVICE_MANIFEST" "rocksdbservice"
 else
-  echo "::warning ::$ROCKSDBSERVICE_MANIFEST not found, skipping..."
+  echo "::warning ::src/server/rocksdbservice/Cargo.toml not found, skipping..."
 fi
 
-if [[ -f "$TOOLS_MANIFEST" ]]; then
+if [[ -n "$TOOLS_MANIFEST" ]]; then
   run_fmt "$TOOLS_MANIFEST" "tools"
 else
-  echo "::warning ::$TOOLS_MANIFEST not found, skipping..."
+  echo "::warning ::src/tools/Cargo.toml not found, skipping..."
 fi
