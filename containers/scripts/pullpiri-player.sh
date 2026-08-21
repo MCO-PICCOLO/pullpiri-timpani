@@ -8,10 +8,17 @@ else
 	MASTER_IP="$(hostname -I | awk '{print $1}')"
 fi
 
-# If you want to use other image, uncomment the line below and comment out the line above
-# CONTAINER_IMAGE="localhost/pullpiri:latest"
-VERSION="v0.7.2-dev.2"
-CONTAINER_IMAGE="ghcr.io/eclipse-pullpiri/pullpiri:${VERSION}"
+INSTALL_MODE="${INSTALL_MODE:-prod}"
+
+# If PULLPIRI_IMAGE is set, it takes precedence over mode-based defaults.
+if [[ -n "${PULLPIRI_IMAGE:-}" ]]; then
+  CONTAINER_IMAGE="${PULLPIRI_IMAGE}"
+elif [[ "${INSTALL_MODE}" == "dev" ]]; then
+  CONTAINER_IMAGE="localhost/pullpiri:latest"
+else
+  VERSION="v0.7.2-dev.2"
+  CONTAINER_IMAGE="ghcr.io/eclipse-pullpiri/pullpiri:${VERSION}"
+fi
 echo "Running player with image: ${CONTAINER_IMAGE}"
 
 # Create a pod with host networking

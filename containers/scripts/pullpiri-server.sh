@@ -8,14 +8,21 @@ else
 	MASTER_IP="$(hostname -I | awk '{print $1}')"
 fi
 
+INSTALL_MODE="${INSTALL_MODE:-prod}"
+
 # Set environment variables
 ROCKSDB_VERSION="v11.18.0"
 ROCKSDB_IMAGE="ghcr.io/mco-piccolo/pullpiri-rocksdb:${ROCKSDB_VERSION}"
 
-# If you want to use other image, uncomment the line below and comment out the line above
-# CONTAINER_IMAGE="localhost/pullpiri:latest"
-VERSION="v0.7.2-dev.2"
-CONTAINER_IMAGE="ghcr.io/eclipse-pullpiri/pullpiri:${VERSION}"
+# If PULLPIRI_IMAGE is set, it takes precedence over mode-based defaults.
+if [[ -n "${PULLPIRI_IMAGE:-}" ]]; then
+  CONTAINER_IMAGE="${PULLPIRI_IMAGE}"
+elif [[ "${INSTALL_MODE}" == "dev" ]]; then
+  CONTAINER_IMAGE="localhost/pullpiri:latest"
+else
+  VERSION="v0.7.2-dev.2"
+  CONTAINER_IMAGE="ghcr.io/eclipse-pullpiri/pullpiri:${VERSION}"
+fi
 echo "Running server with image: ${CONTAINER_IMAGE}"
 
 # Create a pod with host networking
