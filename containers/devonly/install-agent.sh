@@ -54,7 +54,7 @@ fi
 
 # Make directory and binary
 AGENT_BINARY_PATH="/opt/pullpiri/nodeagent"
-sudo mkdir -p /opt/pullpiri
+sudo mkdir -p "$(dirname "${AGENT_BINARY_PATH}")"
 BUILD_BINARY_PATH="${SCRIPT_DIR}/../../src/agent/nodeagent/target/x86_64-unknown-linux-musl/release/nodeagent"
 if [ -f "${BUILD_BINARY_PATH}" ]; then
 	sudo cp "${BUILD_BINARY_PATH}" "${AGENT_BINARY_PATH}"

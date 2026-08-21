@@ -10,8 +10,8 @@ use bytes::Bytes;
 use common::nodeagent::fromactioncontroller::WorkloadCommand;
 use http_body_util::{BodyExt, Full};
 use hyper::{Method, Request, Uri};
-use hyperlocal::{UnixConnector, Uri as UnixUri};
 use hyper_util::{client::legacy::Client, rt::TokioExecutor};
+use hyperlocal::{UnixConnector, Uri as UnixUri};
 use once_cell::sync::Lazy;
 
 // Modify this if you want to run without root authorization

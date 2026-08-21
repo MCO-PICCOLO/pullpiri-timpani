@@ -993,9 +993,7 @@ pub async fn image_exists(
 }
 
 /// Pull an image from a registry
-pub async fn pull_image(
-    image_name: &str,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+pub async fn pull_image(image_name: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let path = format!("/v4.0.0/libpod/images/pull?reference={}", image_name);
     post(&path, empty_body()).await?;
     Ok(())
