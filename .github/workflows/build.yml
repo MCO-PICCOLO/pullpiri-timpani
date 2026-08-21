@@ -35,7 +35,8 @@ jobs:
         id: normalize-image
         shell: bash
         run: |
-          echo "image_repo=$(echo \"${{ env.IMAGE_NAME }}\" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+          image_repo="${IMAGE_NAME,,}"
+          echo "image_repo=${image_repo}" >> "$GITHUB_OUTPUT"
 
       - name: Build and push multi-arch image (agent + server + player)
         uses: docker/build-push-action@v6
