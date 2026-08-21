@@ -62,10 +62,10 @@ run_deny() {
   # Append pass/fail status to markdown summary report
   if $deny_passed; then
     echo "✅ deny check for $label: PASSED" >> "$REPORT_FILE"
-    (( PASSED_TOTAL++ ))
+    PASSED_TOTAL=$((PASSED_TOTAL + 1))
   else
     echo "❌ deny check for $label: FAILED" >> "$REPORT_FILE"
-    (( FAILED_TOTAL++ ))
+    FAILED_TOTAL=$((FAILED_TOTAL + 1))
   fi
 }
 

@@ -63,7 +63,7 @@ run_clippy() {
     echo "✅ Clippy for \`$label\`: **PASSED**" >> "$REPORT_FILE"
   else
     echo "❌ Clippy for \`$label\`: **FAILED**" >> "$REPORT_FILE"
-    (( FAILED_TOTAL++ ))  # Increment failure count
+    FAILED_TOTAL=$((FAILED_TOTAL + 1))  # Increment failure count safely under set -e
   fi
 }
 

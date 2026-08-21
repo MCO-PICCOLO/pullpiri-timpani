@@ -65,7 +65,7 @@ run_fmt() {
     echo "✅ fmt for $label: PASSED" >> "$REPORT_FILE"
   else
     echo "❌ fmt for $label: FAILED" >> "$REPORT_FILE"
-    (( FAILED_TOTAL++ ))  # Increment failure count
+    FAILED_TOTAL=$((FAILED_TOTAL + 1))  # Increment failure count safely under set -e
   fi
 }
 
