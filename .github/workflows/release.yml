@@ -248,6 +248,22 @@ jobs:
           asset_name: nodeagent-linux-arm64
           tag: ${{ github.ref }}
 
+      - name: Generate nodeagent checksum file
+        shell: bash
+        run: |
+          sha256sum dist/binaries/amd/nodeagent-linux-amd64 > dist/binaries/amd/nodeagent-linux-amd64.sha256
+          sha256sum dist/binaries/arm/nodeagent-linux-arm64 > dist/binaries/arm/nodeagent-linux-arm64.sha256
+          cat dist/binaries/amd/nodeagent-linux-amd64.sha256 dist/binaries/arm/nodeagent-linux-arm64.sha256 > dist/binaries/SHA256SUMS-nodeagent
+
+      - name: Upload nodeagent checksum file to release
+        uses: svenstaro/upload-release-action@v2
+        id: upload_nodeagent_checksums
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: dist/binaries/SHA256SUMS-nodeagent
+          asset_name: SHA256SUMS-nodeagent
+          tag: ${{ github.ref }}
+
       # Upload helpful documentation and compliance files
       - name: Upload README to release
         uses: svenstaro/upload-release-action@v2

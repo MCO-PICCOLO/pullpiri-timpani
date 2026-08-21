@@ -54,18 +54,56 @@ fi
 
 # Make directory and binary
 AGENT_BINARY_PATH="/opt/pullpiri/nodeagent"
-rm -f "$AGENT_BINARY_PATH"
 sudo mkdir -p "$(dirname "${AGENT_BINARY_PATH}")"
-if [ ! -f "$AGENT_BINARY_PATH" ]; then
-	BINARY_URL="https://github.com/eclipse-pullpiri/pullpiri/releases/download/v0.7.2-dev.2/nodeagent-linux-${SUFFIX}"
+BINARY_URL="https://github.com/eclipse-pullpiri/pullpiri/releases/latest/download/nodeagent-linux-${SUFFIX}"
+CHECKSUM_URL="https://github.com/eclipse-pullpiri/pullpiri/releases/latest/download/SHA256SUMS-nodeagent"
+TMP_CHECKSUMS="$(mktemp)"
+
+cleanup() {
+	rm -f "${TMP_CHECKSUMS}" ./nodeagent
+}
+trap cleanup EXIT
+
+echo "Fetching latest checksum list from ${CHECKSUM_URL}..."
+curl -fsSL -o "${TMP_CHECKSUMS}" "${CHECKSUM_URL}" || {
+	echo "Error: Failed to download checksum list from ${CHECKSUM_URL}"
+	exit 1
+}
+
+EXPECTED_HASH=$(awk -v suffix="${SUFFIX}" '$2 ~ ("nodeagent-linux-" suffix "$") {print $1; exit}' "${TMP_CHECKSUMS}")
+if [[ -z "${EXPECTED_HASH}" ]]; then
+	echo "Error: Could not find checksum entry for nodeagent-linux-${SUFFIX}"
+	exit 1
+fi
+
+NEEDS_DOWNLOAD=1
+if sudo test -f "${AGENT_BINARY_PATH}"; then
+	CURRENT_HASH=$(sudo sha256sum "${AGENT_BINARY_PATH}" | awk '{print $1}')
+	if [[ "${CURRENT_HASH}" == "${EXPECTED_HASH}" ]]; then
+		echo "Installed nodeagent matches latest release checksum."
+		NEEDS_DOWNLOAD=0
+	else
+		echo "Installed nodeagent is outdated. Replacing with latest release binary."
+		sudo rm -f "${AGENT_BINARY_PATH}"
+	fi
+else
+	echo "No installed nodeagent found. Downloading latest release binary."
+fi
+
+if [[ "${NEEDS_DOWNLOAD}" -eq 1 ]]; then
 	echo "Downloading binary from ${BINARY_URL}..."
-	curl -L -o nodeagent "${BINARY_URL}"
-	if [ $? -ne 0 ]; then
+	curl -fsSL -o nodeagent "${BINARY_URL}" || {
 		echo "Error: Failed to download binary from ${BINARY_URL}"
 		exit 1
+	}
+	DOWNLOADED_HASH=$(sha256sum nodeagent | awk '{print $1}')
+	if [[ "${DOWNLOADED_HASH}" != "${EXPECTED_HASH}" ]]; then
+		echo "Error: Downloaded binary checksum mismatch for nodeagent-linux-${SUFFIX}"
+		exit 1
 	fi
-	sudo mv -f nodeagent "${AGENT_BINARY_PATH}"
+	sudo cp -f nodeagent "${AGENT_BINARY_PATH}"
 fi
+
 sudo chmod +x "${AGENT_BINARY_PATH}"
 echo "Binary installed to ${AGENT_BINARY_PATH}"
 

@@ -45,8 +45,10 @@ NODE_TYPE="vehicle"  # Default node type (vehicle, cloud)
 ARCH=$(uname -m)
 if [ "$ARCH" = "x86_64" ]; then
 	SUFFIX="amd64"
+	BUILD_TARGET="x86_64-unknown-linux-musl"
 elif [ "$ARCH" = "aarch64" ]; then
 	SUFFIX="arm64"
+	BUILD_TARGET="aarch64-unknown-linux-musl"
 else
 	echo "Error: Unsupported architecture '${ARCH}'."
 	exit 1
@@ -55,20 +57,23 @@ fi
 # Make directory and binary
 AGENT_BINARY_PATH="/opt/pullpiri/nodeagent"
 sudo mkdir -p "$(dirname "${AGENT_BINARY_PATH}")"
-BUILD_BINARY_PATH="${SCRIPT_DIR}/../../src/agent/nodeagent/target/x86_64-unknown-linux-musl/release/nodeagent"
+BUILD_BINARY_PATH="${SCRIPT_DIR}/../../src/agent/nodeagent/target/${BUILD_TARGET}/release/nodeagent"
 if [ -f "${BUILD_BINARY_PATH}" ]; then
-	sudo cp "${BUILD_BINARY_PATH}" "${AGENT_BINARY_PATH}"
+	sudo cp -f "${BUILD_BINARY_PATH}" "${AGENT_BINARY_PATH}"
 	echo "Used locally built binary from ${BUILD_BINARY_PATH}"
 else
 	if [ ! -f "${AGENT_BINARY_PATH}" ]; then
 		BINARY_URL="https://github.com/eclipse-pullpiri/pullpiri/releases/latest/download/nodeagent-linux-${SUFFIX}"
-		echo "Downloading binary from ${BINARY_URL}..."
-		curl -L -o nodeagent "${BINARY_URL}"
+		echo "Downloading latest release binary from ${BINARY_URL}"
+		curl -fsSL -o nodeagent "${BINARY_URL}"
 		if [ $? -ne 0 ]; then
 			echo "Error: Failed to download binary from ${BINARY_URL}"
 			exit 1
 		fi
-		sudo mv -f nodeagent "${AGENT_BINARY_PATH}"
+		sudo cp -f nodeagent "${AGENT_BINARY_PATH}"
+		rm -f nodeagent
+	else
+		echo "Using existing installed binary at ${AGENT_BINARY_PATH}"
 	fi
 fi
 sudo chmod +x "${AGENT_BINARY_PATH}"
