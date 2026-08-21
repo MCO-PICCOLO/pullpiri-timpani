@@ -225,8 +225,8 @@ mod tests {
         };
 
         let response = handle_fault_report(request).await;
-        // Should process but may fail to find package (kvstore not running)
-        assert!(response.processed || !response.processed);
+        // kvstore availability can affect processed status, but a response message must exist.
+        assert!(!response.message.is_empty());
     }
 
     #[tokio::test]
