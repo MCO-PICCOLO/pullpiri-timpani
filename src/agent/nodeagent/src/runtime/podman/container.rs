@@ -151,6 +151,9 @@ fn build_host_config(
 ) -> serde_json::Value {
     let mut host_config = serde_json::Map::new();
 
+    host_config.insert("CgroupManager".to_string(), json!("systemd"));
+    host_config.insert("CgroupParent".to_string(), json!("machine.slice"));
+
     // Network configuration
     if host_network {
         host_config.insert("NetworkMode".to_string(), json!("host"));
@@ -1141,6 +1144,14 @@ mod tests {
 
         assert!(ports_obj.contains_key("8080/tcp"));
         assert!(ports_obj.contains_key("9090/tcp"));
+    }
+
+    #[test]
+    fn test_build_host_config_sets_systemd_cgroup() {
+        let host_config = build_host_config(&json!({}), &json!({}), false, &Default::default());
+
+        assert_eq!(host_config["CgroupManager"], json!("systemd"));
+        assert_eq!(host_config["CgroupParent"], json!("machine.slice"));
     }
 
     #[test]

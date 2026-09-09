@@ -36,10 +36,10 @@ spec:
     priority: 50
     policy: FIFO
     cpu_affinity: 0
-    period: 200000
+    period: 100000
     release_time: 0
     runtime: 50000
-    deadline: 250000
+    deadline: 100000
     node_id: HPC
     max_dmiss: 5
 ---
