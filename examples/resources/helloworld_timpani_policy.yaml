@@ -36,10 +36,10 @@ spec:
     priority: 50
     policy: FIFO
     cpu_affinity: 0
-    period: 100
+    period: 200000
     release_time: 0
     runtime: 50000
-    deadline: 100
+    deadline: 250000
     node_id: HPC
     max_dmiss: 5
 ---
@@ -71,7 +71,7 @@ metadata:
 spec:
   hostNetwork: true
   containers:
-    - name: helloworld
+    - name: world
       image: ghcr.io/mco-piccolo/timpani_test:v4
       command: ["./sample_apps"]
       args: ["basic_task"]
