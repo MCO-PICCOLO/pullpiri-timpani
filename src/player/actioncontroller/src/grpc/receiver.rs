@@ -311,14 +311,14 @@ impl ActionControllerConnection for ActionControllerReceiver {
         );
         logd!(3, "[ActionController]   Reason: {}", req.reason);
 
-        // Get Pod YAML from kvstore for the package/model
-        let pod_key = format!("Pod/{}", req.package_name);
+        // Pod artifacts are stored per model name ("Pod/{model}"), not per package.
+        let pod_key = format!("Pod/{}", req.model_name);
         let pod_yaml = match common::kvstore::get(&pod_key).await {
             Ok(yaml) if !yaml.is_empty() => yaml,
             Ok(_) => {
                 let msg = format!(
-                    "Pod not found for package '{}' in kvstore key '{}'",
-                    req.package_name, pod_key
+                    "Pod not found for model '{}' in kvstore key '{}'",
+                    req.model_name, pod_key
                 );
                 logd!(5, "[ActionController] {}", msg);
                 return Ok(Response::new(StopWorkloadResponse {

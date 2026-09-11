@@ -147,16 +147,31 @@ fn build_host_config(
     container: &serde_json::Value,
     spec: &serde_json::Value,
     host_network: bool,
+    host_pid: bool,
+    host_ipc: bool,
     annotations: &std::collections::HashMap<String, String>,
 ) -> serde_json::Value {
     let mut host_config = serde_json::Map::new();
 
-    host_config.insert("CgroupManager".to_string(), json!("systemd"));
-    host_config.insert("CgroupParent".to_string(), json!("machine.slice"));
+    if annotations
+        .get("io.pullpiri.cpusetcpus")
+        .is_some_and(|cpuset| !cpuset.is_empty())
+    {
+        host_config.insert("CgroupManager".to_string(), json!("cgroupfs"));
+        host_config.insert("CgroupParent".to_string(), json!("/rt-isolated"));
+    }
 
     // Network configuration
     if host_network {
         host_config.insert("NetworkMode".to_string(), json!("host"));
+    }
+
+    if host_pid {
+        host_config.insert("PidMode".to_string(), json!("host"));
+    }
+
+    if host_ipc {
+        host_config.insert("IpcMode".to_string(), json!("host"));
     }
 
     // Security context (capabilities, privileged, user/group)
@@ -263,7 +278,10 @@ fn apply_resource_limits(
     }
 
     // CPUset affinity (from annotations: io.pullpiri.cpusetcpus)
-    if let Some(cpuset) = annotations.get("io.pullpiri.cpusetcpus") {
+    if let Some(cpuset) = annotations
+        .get("io.pullpiri.cpusetcpus")
+        .filter(|cpuset| !cpuset.is_empty())
+    {
         host_config.insert("CpusetCpus".to_string(), json!(cpuset));
         println!("Applied CPUset: {}", cpuset);
     }
@@ -748,6 +766,8 @@ async fn create_container(
     container: &serde_json::Value,
     spec: &serde_json::Value,
     host_network: bool,
+    host_pid: bool,
+    host_ipc: bool,
     annotations: &std::collections::HashMap<String, String>,
 ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
     let image = container["image"]
@@ -763,8 +783,16 @@ async fn create_container(
     let name = format!("{}_{}", pod_name, container_name);
 
     // Build the complete container creation request
-    let create_body =
-        build_container_spec(&name, image, container, spec, host_network, annotations);
+    let create_body = build_container_spec(
+        &name,
+        image,
+        container,
+        spec,
+        host_network,
+        host_pid,
+        host_ipc,
+        annotations,
+    );
 
     println!("{}", create_body);
 
@@ -791,6 +819,8 @@ fn build_container_spec(
     container: &serde_json::Value,
     spec: &serde_json::Value,
     host_network: bool,
+    host_pid: bool,
+    host_ipc: bool,
     annotations: &std::collections::HashMap<String, String>,
 ) -> serde_json::Value {
     let mut create_body = json!({
@@ -827,7 +857,14 @@ fn build_container_spec(
     }
 
     // Host configuration (resources, security, networking, etc.)
-    let host_config = build_host_config(container, spec, host_network, annotations);
+    let host_config = build_host_config(
+        container,
+        spec,
+        host_network,
+        host_pid,
+        host_ipc,
+        annotations,
+    );
     if !host_config.as_object().unwrap().is_empty() {
         create_body["HostConfig"] = host_config;
     }
@@ -886,13 +923,23 @@ pub async fn start(
 ) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
     let (pod_name, spec, annotations) = parse_pod(pod_yaml)?;
     let host_network = spec["hostNetwork"].as_bool().unwrap_or(false);
+    let host_pid = spec["hostPID"].as_bool().unwrap_or(false);
+    let host_ipc = spec["hostIPC"].as_bool().unwrap_or(false);
 
     let mut container_ids = Vec::new();
 
     if let Some(containers) = spec["containers"].as_array() {
         for container in containers.iter() {
-            let container_id =
-                create_container(&pod_name, container, &spec, host_network, &annotations).await?;
+            let container_id = create_container(
+                &pod_name,
+                container,
+                &spec,
+                host_network,
+                host_pid,
+                host_ipc,
+                &annotations,
+            )
+            .await?;
 
             // Start the container
             println!("Starting container: {}", container_id);
@@ -1147,11 +1194,48 @@ mod tests {
     }
 
     #[test]
-    fn test_build_host_config_sets_systemd_cgroup() {
-        let host_config = build_host_config(&json!({}), &json!({}), false, &Default::default());
+    fn test_build_host_config_sets_rt_isolated_cgroup_for_cpuset_workload() {
+        let annotations = std::collections::HashMap::from([(
+            "io.pullpiri.cpusetcpus".to_string(),
+            "12-15".to_string(),
+        )]);
+        let host_config =
+            build_host_config(&json!({}), &json!({}), false, false, false, &annotations);
 
-        assert_eq!(host_config["CgroupManager"], json!("systemd"));
-        assert_eq!(host_config["CgroupParent"], json!("machine.slice"));
+        assert_eq!(host_config["CgroupManager"], json!("cgroupfs"));
+        assert_eq!(host_config["CgroupParent"], json!("/rt-isolated"));
+        assert_eq!(host_config["CpusetCpus"], json!("12-15"));
+    }
+
+    #[test]
+    fn test_build_host_config_uses_default_cgroup_without_cpuset_workload() {
+        let host_config = build_host_config(
+            &json!({}),
+            &json!({}),
+            false,
+            false,
+            false,
+            &Default::default(),
+        );
+
+        assert!(host_config.get("CgroupManager").is_none());
+        assert!(host_config.get("CgroupParent").is_none());
+        assert!(host_config.get("CpusetCpus").is_none());
+    }
+
+    #[test]
+    fn test_build_host_config_sets_host_pid_and_ipc_modes() {
+        let host_config = build_host_config(
+            &json!({}),
+            &json!({}),
+            false,
+            true,
+            true,
+            &Default::default(),
+        );
+
+        assert_eq!(host_config["PidMode"], json!("host"));
+        assert_eq!(host_config["IpcMode"], json!("host"));
     }
 
     #[test]
