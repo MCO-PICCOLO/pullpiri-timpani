@@ -336,6 +336,34 @@ impl ActionControllerConnection for ActionControllerReceiver {
             }
         };
 
+        // Timpani removes the workload from the node schedule first; the
+        // container is stopped only after Timpani reports a verified success.
+        if !req.workload_id.is_empty() {
+            let recovery_policy = determine_recovery_policy(&req.reason);
+            if let Err(e) = crate::grpc::sender::timpani::enforce_recovery_policy(
+                &req.workload_id,
+                recovery_policy,
+            )
+            .await
+            {
+                let msg = format!(
+                    "Timpani did not confirm recovery of workload '{}': {}",
+                    req.workload_id, e
+                );
+                logd!(5, "[ActionController] {}", msg);
+                return Ok(Response::new(StopWorkloadResponse {
+                    success: false,
+                    message: msg,
+                }));
+            }
+            logd!(
+                3,
+                "[ActionController] Timpani confirmed recovery: workload='{}', policy={:?}",
+                req.workload_id,
+                recovery_policy
+            );
+        }
+
         // Determine node type (default to "nodeagent" for now)
         let node_type = "nodeagent";
 
@@ -354,30 +382,6 @@ impl ActionControllerConnection for ActionControllerReceiver {
                     req.model_name,
                     req.node_name
                 );
-
-                // Notify Timpani about the recovery action (if workload_id is provided)
-                if !req.workload_id.is_empty() {
-                    let recovery_policy = determine_recovery_policy(&req.reason);
-                    if let Err(e) = crate::grpc::sender::timpani::enforce_recovery_policy(
-                        &req.workload_id,
-                        recovery_policy,
-                    )
-                    .await
-                    {
-                        // Log but don't fail the operation - Timpani notification is best-effort
-                        logd!(
-                            5,
-                            "[ActionController] Failed to notify Timpani about recovery: {}",
-                            e
-                        );
-                    } else {
-                        logd!(
-                            3,
-                            "[ActionController] Notified Timpani about recovery: workload='{}', policy={:?}",
-                            req.workload_id, recovery_policy
-                        );
-                    }
-                }
 
                 Ok(Response::new(StopWorkloadResponse {
                     success: true,
