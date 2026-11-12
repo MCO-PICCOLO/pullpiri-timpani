@@ -238,18 +238,16 @@ impl ActionControllerManager {
         )?;
 
         // Inject CPUset information if schedule is available
-        if let Some(_sched_name) = schedule_name {
-            if let Ok(cpuset) = self.get_cpuset_for_node(&model_node).await {
-                pod_with_annotations =
-                    self.inject_cpuset_annotation(&pod_with_annotations, &cpuset)?;
-                logd!(
-                    3,
-                    "Injected cpuset '{}' for model '{}' on node '{}'",
-                    cpuset,
-                    model_name,
-                    model_node
-                );
-            }
+        if schedule_name.is_some() && matches!(action, "launch" | "update" | "rollback") {
+            let cpuset = self.get_cpuset_for_node(&model_node).await?;
+            pod_with_annotations = self.inject_cpuset_annotation(&pod_with_annotations, &cpuset)?;
+            logd!(
+                3,
+                "Injected cpuset '{}' for model '{}' on node '{}'",
+                cpuset,
+                model_name,
+                model_node
+            );
         }
 
         match action {
@@ -373,12 +371,16 @@ impl ActionControllerManager {
     /// * `Err(...)` - If node not found or configuration not available
     async fn get_cpuset_for_node(&self, node_id: &str) -> Result<String> {
         let key = format!("timpani/nodes/{}/available_cpus", node_id);
-        let cpuset = common::kvstore::get(&key).await.map_err(|e| {
+        let cpuset = common::kvstore::get(&key).await.map_err(|error| {
             format!(
                 "CPUset configuration not found for node '{}': {}",
-                node_id, e
+                node_id, error
             )
         })?;
+        let cpuset = cpuset.trim().to_string();
+        if cpuset.is_empty() {
+            return Err(format!("CPUset for node '{}' is empty", node_id).into());
+        }
 
         logd!(3, "Retrieved cpuset for node '{}': {}", node_id, cpuset);
         Ok(cpuset)
@@ -1060,6 +1062,36 @@ mod tests {
     use super::*;
     use crate::manager::Status;
     use std::error::Error;
+
+    #[tokio::test]
+    async fn test_get_cpuset_for_node_trims_value() -> Result<()> {
+        let node_id = "actioncontroller-cpuset-trim-test";
+        let key = format!("timpani/nodes/{}/available_cpus", node_id);
+        common::kvstore::put(&key, " \t2-3 \n").await?;
+
+        let manager = ActionControllerManager::new();
+        let result = manager.get_cpuset_for_node(node_id).await;
+        common::kvstore::delete(&key).await?;
+
+        assert_eq!(result?, "2-3");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_cpuset_for_node_rejects_empty_value() -> Result<()> {
+        let node_id = "actioncontroller-cpuset-empty-test";
+        let key = format!("timpani/nodes/{}/available_cpus", node_id);
+        let manager = ActionControllerManager::new();
+
+        for cpuset in ["", " \t\n"] {
+            common::kvstore::put(&key, cpuset).await?;
+            let result = manager.get_cpuset_for_node(node_id).await;
+            common::kvstore::delete(&key).await?;
+
+            assert!(result.is_err());
+        }
+        Ok(())
+    }
 
     #[tokio::test]
     async fn test_get_node_role_from_kvstore_invalid_json() {
