@@ -43,18 +43,18 @@ pub async fn add_sched_info(sched_info: SchedInfo) -> Result<(), String> {
     }
 }
 
-/// Send recovery policy enforcement notification to Timpani server
+/// Ask Timpani to enforce a recovery policy for a workload
 ///
-/// Notifies Timpani that a workload has been stopped/recovered due to fault handling.
-/// This allows Timpani to perform necessary cleanup or post-processing.
+/// For STOP, Timpani replies after the node has switched to a schedule
+/// without the workload, so the workload can be stopped afterwards.
 ///
 /// # Arguments
-/// * `workload_id` - The workload ID (schedule name) that was recovered
-/// * `policy` - The recovery policy that was applied (STOP, RESTART, TERMINATE)
+/// * `workload_id` - The workload ID (schedule name) to recover
+/// * `policy` - The recovery policy to apply (STOP, RESTART, TERMINATE)
 ///
 /// # Returns
-/// * `Ok(())` if successful
-/// * `Err(String)` if connection or sending fails
+/// * `Ok(())` if Timpani reports success (status 0)
+/// * `Err(String)` if connection or sending fails, or Timpani reports failure
 pub async fn enforce_recovery_policy(
     workload_id: &str,
     policy: RecoveryPolicy,
@@ -81,7 +81,7 @@ pub async fn enforce_recovery_policy(
         .map(|r| r.into_inner());
 
     match response {
-        Ok(res) => {
+        Ok(res) if res.status == 0 => {
             logd!(
                 3,
                 "[enforce_recovery_policy] RESPONSE={:?}, workload='{}'",
@@ -89,6 +89,18 @@ pub async fn enforce_recovery_policy(
                 workload_id
             );
             Ok(())
+        }
+        Ok(res) => {
+            logd!(
+                5,
+                "[enforce_recovery_policy] RESPONSE={:?}, workload='{}'",
+                res,
+                workload_id
+            );
+            Err(format!(
+                "Timpani enforce_recovery_policy returned status {}",
+                res.status
+            ))
         }
         Err(e) => {
             logd!(

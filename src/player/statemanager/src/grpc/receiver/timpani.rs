@@ -32,7 +32,9 @@ impl FaultService for TimpaniReceiver {
             _ => PolicyFaultType::FaultUnknown,
         };
 
-        // Forward to PolicyManager
+        // Forward to PolicyManager in the background and acknowledge receipt now:
+        // Timpani-O sends faults from its node stream reader, and a STOP policy
+        // waits for the node's table ACK on that same stream.
         let request = ReportFaultRequest {
             workload_id: info.workload_id.clone(),
             node_id: info.node_id.clone(),
@@ -40,24 +42,26 @@ impl FaultService for TimpaniReceiver {
             fault_type: fault_type as i32,
         };
 
-        match crate::grpc::sender::report_fault_to_policymanager(request).await {
-            Ok(response) => {
-                let resp = response.into_inner();
-                common::logd!(
-                    3,
-                    "[StateManager] Forwarded fault to PolicyManager: processed={}, message={}",
-                    resp.processed,
-                    resp.message
-                );
+        tokio::spawn(async move {
+            match crate::grpc::sender::report_fault_to_policymanager(request).await {
+                Ok(response) => {
+                    let resp = response.into_inner();
+                    common::logd!(
+                        3,
+                        "[StateManager] Forwarded fault to PolicyManager: processed={}, message={}",
+                        resp.processed,
+                        resp.message
+                    );
+                }
+                Err(e) => {
+                    common::logd!(
+                        5,
+                        "[StateManager] Failed to forward fault to PolicyManager: {}",
+                        e.message()
+                    );
+                }
             }
-            Err(e) => {
-                common::logd!(
-                    5,
-                    "[StateManager] Failed to forward fault to PolicyManager: {}",
-                    e.message()
-                );
-            }
-        }
+        });
 
         // Process the fault information and generate a response
         let response = TimpaniResponse { status: 0 };

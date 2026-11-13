@@ -4,7 +4,7 @@
 #################################
 # === Build Stage ===
 #################################
-FROM rust:1.88.0-slim AS builder
+FROM docker.io/library/rust:1.88.0-slim AS builder
 
 ARG TARGETARCH
 
@@ -13,6 +13,7 @@ WORKDIR /pullpiri
 
 # Copy shared source and both components
 COPY ./src/Cargo.toml .
+COPY ./src/Cargo.lock .
 COPY ./src/common/ /pullpiri/common/
 COPY ./src/server/ /pullpiri/server/
 COPY ./src/player/ /pullpiri/player/
@@ -50,7 +51,7 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
 #################################
 # === Runtime Stage ===
 #################################
-FROM alpine:3.21.3
+FROM docker.io/library/alpine:3.21.3
 
 ARG TARGETARCH
 ENV TARGETARCH=${TARGETARCH}
